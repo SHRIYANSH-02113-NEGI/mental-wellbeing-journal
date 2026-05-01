@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Entry = require("../models/Entry");
+const axios = require("axios");
 
 /* Helper Logic Functions */
 
@@ -27,22 +28,6 @@ function perceptionType(mood, sentimentScore) {
   return "Aligned";
 }
 
-/* 🔥 MOCK AI FUNCTION (REPLACES localhost API) */
-function analyzeText(text) {
-  let score = 0;
-
-  if (text.toLowerCase().includes("happy")) score = 0.8;
-  else if (text.toLowerCase().includes("sad")) score = -0.7;
-  else if (text.toLowerCase().includes("stress")) score = -0.6;
-  else score = Math.random() * 2 - 1;
-
-  let severity = "Low";
-  if (score < -0.5) severity = "High";
-  else if (score < 0) severity = "Moderate";
-
-  return { score, severity };
-}
-
 /* 🟢 POST ENTRY */
 router.post("/entry", async (req, res) => {
   try {
@@ -52,8 +37,13 @@ router.post("/entry", async (req, res) => {
       return res.status(400).json({ error: "Missing data" });
     }
 
-    // 🔥 Use mock AI instead of localhost API
-    const aiResult = analyzeText(text);
+    // 🔥 CALL NLP SERVICE
+    const aiResponse = await axios.post(
+      "https://nlp-service-aqmu.onrender.com/analyze",
+      { text }
+    );
+
+    const aiResult = aiResponse.data;
 
     const entry = new Entry({
       text,
@@ -72,8 +62,11 @@ router.post("/entry", async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to save entry" });
+    console.error(err.message);
+    res.status(500).json({
+      error: "Failed to save entry",
+      details: err.message
+    });
   }
 });
 
@@ -95,7 +88,7 @@ router.get("/analytics", async (req, res) => {
       .limit(30);
 
     const sentimentTrend = entries.map(e => ({
-      date: e.createdAt.toDateString(),
+      date: e.createdAt?.toDateString(),
       score: e.sentimentScore
     }));
 
