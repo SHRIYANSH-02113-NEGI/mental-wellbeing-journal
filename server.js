@@ -1,73 +1,186 @@
-require("dotenv").config();
+const router = require("express").Router();
+const Entry = require("../models/Entry");
+const axios = require("axios");
 
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
+/* Helper Functions */
 
-const journalRoutes = require("./routes/journalRoutes");
+function moodToExpectedRange(mood) {
+  if (mood === "Happy") return [0.2, 1];
+  if (mood === "Neutral") return [-0.2, 0.2];
+  if (["Sad", "Anxious", "Stressed"].includes(mood))
+    return [-1, -0.2];
 
-const app = express();
+  return [-1, 1];
+}
 
-/* ✅ Middleware */
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
+function detectMismatch(mood, sentimentScore) {
+  const [min, max] = moodToExpectedRange(mood);
+  return sentimentScore < min || sentimentScore > max;
+}
 
-app.use(express.json());
+function perceptionType(mood, sentimentScore) {
+  if (mood === "Happy" && sentimentScore < 0)
+    return "Masking Stress";
 
-/* 🔥 Auto UserId Middleware */
-app.use((req, res, next) => {
-  let userId = req.headers["x-user-id"];
+  if (["Sad", "Anxious"].includes(mood) && sentimentScore > 0)
+    return "Resilience";
 
-  if (!userId) {
-    userId = "user_" + Math.random().toString(36).substr(2, 9);
-  }
+  return "Aligned";
+}
 
-  req.userId = userId;
-  next();
-});
+/* 🟢 POST ENTRY */
+router.post("/entry", async (req, res) => {
+  try {
+    const { text, mood } = req.body;
 
-/* ✅ Root route */
-app.get("/", (req, res) => {
-  res.json({ message: "Backend is LIVE 🚀" });
-});
+    if (!text || !mood) {
+      return res.status(400).json({ error: "Missing data" });
+    }
 
-/* ✅ Routes */
-app.use("/api", journalRoutes);
+    // 🔥 NLP API CALL
+    const aiResponse = await axios.post(
+      "https://nlp-service-aqmu.onrender.com/analyze",
+      { text }
+    );
 
-/* ❗ 404 */
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Route not found"
-  });
-});
+    const aiResult = aiResponse.data;
 
-/* ❗ Error handler */
-app.use((err, req, res, next) => {
-  console.error("Server Error:", err.stack);
-  res.status(500).json({
-    success: false,
-    error: "Internal Server Error",
-    message: err.message
-  });
-});
+    if (!aiResult.success) {
+      throw new Error("NLP service failed");
+    }
 
-/* ✅ DB + Server */
-const PORT = process.env.PORT || 5000;
+    const comparison =
+      mood === aiResult.predicted_mood ? "Match" : "Mismatch";
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected ✅");
+    const mismatch = detectMismatch(mood, aiResult.score);
 
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    const entry = new Entry({
+      userId: req.userId,
+
+      text,
+      mood,
+
+      predictedMood: aiResult.predicted_mood,
+      moodComparison: comparison,
+
+      sentimentScore: aiResult.score,
+      severity: aiResult.severity,
+      mismatch,
+      perceptionType: perceptionType(mood, aiResult.score),
+
+      confidence: Math.abs(aiResult.score),
+      insight: mismatch
+        ? "Your mood and feelings don’t match. Reflect a bit."
+        : "Your feelings and mood are aligned."
     });
-  })
-  .catch(err => {
-    console.error("DB Connection Error ❌:", err.message);
-    process.exit(1);
-  });
+
+    await entry.save();
+
+    res.json({
+      success: true,
+      data: entry
+    });
+
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({
+      error: "Failed to save entry",
+      details: err.message
+    });
+  }
+});
+
+/* 🟢 GET USER ENTRIES */
+router.get("/entry", async (req, res) => {
+  try {
+    const entries = await Entry.find({
+      userId: req.userId
+    }).sort({ createdAt: -1 });
+
+    res.json(entries);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* 🟢 ANALYTICS */
+router.get("/analytics", async (req, res) => {
+  try {
+    const entries = await Entry.find({
+      userId: req.userId
+    })
+      .sort({ createdAt: 1 })
+      .limit(30);
+
+    const sentimentTrend = entries.map(e => ({
+      date: e.createdAt?.toDateString(),
+      score: e.sentimentScore
+    }));
+
+    const moodCount = {};
+    const predictedMoodCount = {};
+
+    entries.forEach(e => {
+      moodCount[e.mood] = (moodCount[e.mood] || 0) + 1;
+      predictedMoodCount[e.predictedMood] =
+        (predictedMoodCount[e.predictedMood] || 0) + 1;
+    });
+
+    res.json({
+      sentimentTrend,
+      moodCount,
+      predictedMoodCount
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+});
+
+/* 🟢 AWARENESS */
+router.get("/awareness", async (req, res) => {
+  try {
+    const entries = await Entry.find({
+      userId: req.userId
+    });
+
+    const total = entries.length;
+    const aligned = entries.filter(e => !e.mismatch).length;
+
+    const awarenessScore =
+      total === 0 ? 0 : Math.round((aligned / total) * 100);
+
+    res.json({
+      awarenessScore,
+      totalEntries: total,
+      alignedEntries: aligned,
+      mismatchedEntries: total - aligned
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to calculate awareness" });
+  }
+});
+
+/* 🟢 PERCEPTION ANALYSIS */
+router.get("/perception-analysis", async (req, res) => {
+  try {
+    const entries = await Entry.find({
+      userId: req.userId
+    });
+
+    const result = {};
+    entries.forEach(e => {
+      result[e.perceptionType] =
+        (result[e.perceptionType] || 0) + 1;
+    });
+
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to analyze perception data" });
+  }
+});
+
+module.exports = router;
