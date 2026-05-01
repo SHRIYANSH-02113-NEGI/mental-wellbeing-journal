@@ -8,39 +8,41 @@ const journalRoutes = require("./routes/journalRoutes");
 
 const app = express();
 
-// ✅ Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://mental-wellbeing-full.vercel.app",
+    "http://localhost:3000"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 app.use(express.json());
 
-// ✅ Root route (fixes "Cannot GET /")
 app.get("/", (req, res) => {
-  res.json({ message: "Backend is LIVE 🚀" });
+  res.json({ message: "Backend is LIVE" });
 });
 
-// ✅ API routes
 app.use("/api", journalRoutes);
 
-// ✅ Port (Render provides PORT automatically)
-const PORT = process.env.PORT || 5000;
-
-// ✅ Connect DB THEN start server (IMPORTANT)
-mongoose
-  .connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log("MongoDB connected ✅");
+    console.log("MongoDB Atlas connected ");
+
+    const PORT = process.env.PORT || 5000;
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
+
   })
   .catch(err => {
-    console.error("DB Connection Error ❌:", err.message);
+    console.error("DB Connection Error:", err);
     process.exit(1);
   });
 
-// ✅ Error handler
 app.use((err, req, res, next) => {
-  console.error("Server Error:", err.message);
+  console.error("Server Error:", err.stack);
   res.status(500).json({
     success: false,
     error: "Internal Server Error"
