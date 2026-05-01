@@ -37,7 +37,6 @@ router.post("/entry", async (req, res) => {
       return res.status(400).json({ error: "Missing data" });
     }
 
-    // 🔥 NLP API CALL
     const aiResponse = await axios.post(
       "https://nlp-service-aqmu.onrender.com/analyze",
       { text }
@@ -55,6 +54,8 @@ router.post("/entry", async (req, res) => {
     const mismatch = detectMismatch(mood, aiResult.score);
 
     const entry = new Entry({
+      userId: req.userId, // 🔥 IMPORTANT FIX
+
       content: {
         text
       },
@@ -93,10 +94,13 @@ router.post("/entry", async (req, res) => {
   }
 });
 
-/* 🟢 GET ALL ENTRIES */
+/* 🟢 GET USER ENTRIES (FIXED) */
 router.get("/entry", async (req, res) => {
   try {
-    const entries = await Entry.find().sort({ createdAt: -1 });
+    const entries = await Entry.find({
+      userId: req.userId   // 🔥 IMPORTANT FIX
+    }).sort({ createdAt: -1 });
+
     res.json(entries);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -106,7 +110,9 @@ router.get("/entry", async (req, res) => {
 /* 🟢 ANALYTICS */
 router.get("/analytics", async (req, res) => {
   try {
-    const entries = await Entry.find()
+    const entries = await Entry.find({
+      userId: req.userId   // 🔥 IMPORTANT FIX
+    })
       .sort({ createdAt: 1 })
       .limit(30);
 
@@ -141,7 +147,9 @@ router.get("/analytics", async (req, res) => {
 /* 🟢 AWARENESS */
 router.get("/awareness", async (req, res) => {
   try {
-    const entries = await Entry.find();
+    const entries = await Entry.find({
+      userId: req.userId   // 🔥 IMPORTANT FIX
+    });
 
     const total = entries.length;
     const aligned = entries.filter(e => !e.analysis?.mismatch).length;
@@ -164,7 +172,9 @@ router.get("/awareness", async (req, res) => {
 /* 🟢 PERCEPTION ANALYSIS */
 router.get("/perception-analysis", async (req, res) => {
   try {
-    const entries = await Entry.find();
+    const entries = await Entry.find({
+      userId: req.userId   // 🔥 IMPORTANT FIX
+    });
 
     const result = {};
     entries.forEach(e => {
