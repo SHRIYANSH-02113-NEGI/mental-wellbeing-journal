@@ -11,9 +11,21 @@ const EntrySchema = new mongoose.Schema({
     required: true
   },
 
+  // ✅ entered mood (existing)
   mood: {
     type: String,
     required: true
+  },
+
+  // 🔥 NEW: predicted mood from NLP
+  predictedMood: {
+    type: String
+  },
+
+  // 🔥 NEW: comparison (optional but useful)
+  moodComparison: {
+    type: String,
+    enum: ["Match", "Mismatch"]
   },
 
   sentimentScore: {
@@ -36,6 +48,15 @@ const EntrySchema = new mongoose.Schema({
     type: String,
     enum: ["Aligned", "Masking Stress", "Resilience"],
     default: "Aligned"
+  },
+
+  // 🔥 OPTIONAL: extra insights
+  confidence: {
+    type: Number
+  },
+
+  insight: {
+    type: String
   },
 
   createdAt: {
