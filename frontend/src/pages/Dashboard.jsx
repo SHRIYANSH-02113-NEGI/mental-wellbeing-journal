@@ -18,7 +18,7 @@ ChartJS.register(
   LineElement,
   ArcElement,
   Tooltip,
-  Legend,
+  Legend
 );
 
 export default function Dashboard() {
@@ -34,12 +34,22 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("https://mental-backend-heru.onrender.com/api/analytics")
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchAnalytics = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.REACT_APP_API_URL}/api/analytics` // ✅ FIXED
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch");
+        }
+
+        const data = await res.json();
+
         const t = data.sentimentTrend || [];
         const rawMood = data.moodCount || {};
 
+        // normalize moods
         const normalizedMood = {};
         Object.entries(rawMood).forEach(([key, value]) => {
           const cleanKey = key.toLowerCase();
@@ -58,7 +68,7 @@ export default function Dashboard() {
         const dominant =
           Object.keys(normalizedMood).length > 0
             ? Object.keys(normalizedMood).reduce((a, b) =>
-                normalizedMood[a] > normalizedMood[b] ? a : b,
+                normalizedMood[a] > normalizedMood[b] ? a : b
               )
             : "none";
 
@@ -69,12 +79,14 @@ export default function Dashboard() {
           types: Object.keys(normalizedMood).length,
         });
 
-        setLoading(false);
-      })
-      .catch(() => {
+      } catch (err) {
         setError("Failed to load dashboard");
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchAnalytics();
   }, []);
 
   const generateColors = (count) => {
@@ -107,6 +119,7 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card title="Avg Sentiment" value={stats.avg} />
         <Card title="Dominant Mood" value={stats.dominant} />
@@ -114,7 +127,9 @@ export default function Dashboard() {
         <Card title="Mood Types" value={stats.types} />
       </div>
 
+      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Line Chart */}
         <div className="bg-white p-6 rounded-2xl shadow">
           <h2 className="text-xl font-semibold">
             Sentiment Trend
@@ -131,7 +146,7 @@ export default function Dashboard() {
                   new Date(t.date).toLocaleDateString("en-IN", {
                     day: "numeric",
                     month: "short",
-                  }),
+                  })
                 ),
                 datasets: [
                   {
@@ -157,6 +172,7 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Doughnut Chart */}
         <div className="bg-white p-6 rounded-2xl shadow">
           <h2 className="text-xl font-semibold">
             Mood Distribution
@@ -174,7 +190,7 @@ export default function Dashboard() {
                   {
                     data: Object.values(mood),
                     backgroundColor: generateColors(
-                      Object.keys(mood).length,
+                      Object.keys(mood).length
                     ),
                   },
                 ],
