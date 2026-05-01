@@ -9,14 +9,13 @@ const journalRoutes = require("./routes/journalRoutes");
 const app = express();
 
 /* =======================
-   ✅ CORS (same as yours, just cleaner)
+   ✅ CORS CONFIG
 ======================= */
 app.use(cors({
   origin: [
-    "https://mental-wellbeing-full.vercel.app",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://mental-wellbeing-full.vercel.app"
   ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
@@ -33,7 +32,7 @@ app.get("/", (req, res) => {
 });
 
 /* =======================
-   ✅ HEALTH ROUTE (important for Render)
+   ✅ HEALTH CHECK
 ======================= */
 app.get("/health", (req, res) => {
   res.send("OK");
@@ -56,7 +55,7 @@ mongoose.connect(process.env.MONGO_URI, {
   serverSelectionTimeoutMS: 5000
 })
 .then(() => {
-  console.log("MongoDB Atlas connected ✅");
+  console.log("MongoDB connected ✅");
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
