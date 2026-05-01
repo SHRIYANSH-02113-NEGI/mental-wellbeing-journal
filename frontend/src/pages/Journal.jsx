@@ -22,14 +22,14 @@ export default function Journal() {
 
     try {
       const res = await fetch(
-        "https://mental-backend-heru.onrender.com/api/entry",
+        `${process.env.REACT_APP_API_URL}/api/entry`, // ✅ FIXED
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ text, mood }),
-        },
+        }
       );
 
       const data = await res.json();
@@ -50,6 +50,7 @@ export default function Journal() {
       setLoading(false);
     }
   };
+
   const maskingQuotes = [
     "You don’t have to pretend to be okay all the time.",
     "Even silent struggles deserve to be heard.",
@@ -73,9 +74,11 @@ export default function Journal() {
     "Clarity in emotions brings peace.",
     "You’re handling things with honesty and balance.",
   ];
+
   const getRandomQuote = (quotes) => {
     return quotes[Math.floor(Math.random() * quotes.length)];
   };
+
   const getInsight = () => {
     if (!result) return "";
 
@@ -96,7 +99,9 @@ export default function Journal() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
-      <h1 className="text-3xl font-bold mb-6 text-center">Daily Journal</h1>
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        Daily Journal
+      </h1>
 
       <div className="bg-white dark:bg-card shadow-xl rounded-2xl p-6 space-y-5 border">
         <textarea
@@ -128,12 +133,16 @@ export default function Journal() {
           {loading ? "Analyzing..." : "Save Entry"}
         </button>
 
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        {error && (
+          <p className="text-red-500 text-sm text-center">{error}</p>
+        )}
       </div>
 
       {result && (
         <div className="mt-8 bg-white shadow-xl rounded-2xl p-6 border">
-          <h2 className="text-xl font-semibold mb-4">Analysis Result</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Analysis Result
+          </h2>
 
           <div className="space-y-3 text-sm">
             <div className="p-3 bg-gray-50 rounded-lg">
@@ -157,8 +166,21 @@ export default function Journal() {
               </span>
 
               <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
-                Perception Type: {result.perceptionType}
+                Perception Type: {result.perceptionType || "N/A"}
               </span>
+
+              {/* ✅ Added NLP fields safely */}
+              {result.predicted_mood && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">
+                  NLP Mood: {result.predicted_mood}
+                </span>
+              )}
+
+              {result.severity && (
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+                  Severity: {result.severity}
+                </span>
+              )}
             </div>
 
             <div className="mt-4 p-4 rounded-xl bg-yellow-50 border text-yellow-800 text-sm">
