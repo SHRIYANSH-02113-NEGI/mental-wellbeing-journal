@@ -16,25 +16,29 @@ def preprocess_text(text):
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
+
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"message": "NLP Service Running 🚀"})
 
+
 @app.route("/analyze", methods=["POST"])
 def analyze():
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)  # ✅ safer
 
         if not data or "text" not in data:
-            return jsonify({"error": "Text is required"}), 400
+            return jsonify({"success": False, "error": "Text is required"}), 400
 
         raw_text = data["text"]
 
         if not isinstance(raw_text, str) or raw_text.strip() == "":
-            return jsonify({"error": "Invalid or empty text"}), 400
+            return jsonify({"success": False, "error": "Invalid or empty text"}), 400
+
         text = preprocess_text(raw_text)
+
         scores = analyzer.polarity_scores(text)
-        score = scores["compound"]
+        score = scores.get("compound", 0)  # ✅ safer access
 
         if score >= 0.4:
             predicted_mood = "Happy"
@@ -42,6 +46,7 @@ def analyze():
             predicted_mood = "Neutral"
         else:
             predicted_mood = "Sad"
+
         if score >= 0.5:
             severity = "Low"
         elif score >= -0.5:
@@ -55,7 +60,7 @@ def analyze():
             "cleaned_text": text,
             "score": score,
             "severity": severity,
-            "predicted_mood": predicted_mood,  
+            "predicted_mood": predicted_mood,
             "details": scores
         })
 
@@ -66,7 +71,6 @@ def analyze():
         }), 500
 
 
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 8000))  # ✅ Render-compatible
     app.run(host="0.0.0.0", port=port)
