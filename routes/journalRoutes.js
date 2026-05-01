@@ -45,9 +45,14 @@ router.post("/entry", async (req, res) => {
 
     const aiResult = aiResponse.data;
 
+    if (!aiResult.success) {
+      throw new Error("NLP service failed");
+    }
+
     const entry = new Entry({
       text,
-      mood,
+      mood, // ✅ user entered mood
+      predictedMood: aiResult.predicted_mood, // 🔥 NEW FIELD
       sentimentScore: aiResult.score,
       severity: aiResult.severity,
       mismatch: detectMismatch(mood, aiResult.score),
@@ -58,7 +63,11 @@ router.post("/entry", async (req, res) => {
 
     res.json({
       success: true,
-      data: entry
+      data: {
+        ...entry._doc,
+        enteredMood: mood,               // ✅ explicit
+        predictedMood: aiResult.predicted_mood // ✅ explicit
+      }
     });
 
   } catch (err) {
@@ -74,7 +83,16 @@ router.post("/entry", async (req, res) => {
 router.get("/entry", async (req, res) => {
   try {
     const entries = await Entry.find().sort({ createdAt: -1 });
-    res.json(entries);
+
+    // 🔥 include both moods clearly
+    const formatted = entries.map(e => ({
+      ...e._doc,
+      enteredMood: e.mood,
+      predictedMood: e.predictedMood
+    }));
+
+    res.json(formatted);
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -93,13 +111,18 @@ router.get("/analytics", async (req, res) => {
     }));
 
     const moodCount = {};
+    const predictedMoodCount = {};
+
     entries.forEach(e => {
       moodCount[e.mood] = (moodCount[e.mood] || 0) + 1;
+      predictedMoodCount[e.predictedMood] =
+        (predictedMoodCount[e.predictedMood] || 0) + 1;
     });
 
     res.json({
       sentimentTrend,
-      moodCount
+      moodCount,
+      predictedMoodCount // 🔥 NEW
     });
 
   } catch (err) {
