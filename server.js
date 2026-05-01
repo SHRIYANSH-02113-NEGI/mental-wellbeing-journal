@@ -8,7 +8,7 @@ const journalRoutes = require("./routes/journalRoutes");
 
 const app = express();
 
-// ✅ Better CORS (allows local + deployed frontend)
+// ✅ CORS setup (local + deployed frontend)
 const allowedOrigins = [
   "https://mental-wellbeing-full.vercel.app",
   "http://localhost:3000"
@@ -28,27 +28,26 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ Root route (for Render health check)
+// ✅ Root route
 app.get("/", (req, res) => {
   res.send("Backend is LIVE 🚀");
 });
 
-// ✅ Routes
+// ✅ API routes
 app.use("/api", journalRoutes);
 
-// ✅ Error handler (improved)
+// ✅ Error handler
 app.use((err, req, res, next) => {
   console.error(err.message);
   res.status(500).json({ error: err.message || "Something went wrong" });
 });
 
-// ✅ Connect DB THEN start server (IMPORTANT)
+// ✅ Connect DB and start server
 const PORT = process.env.PORT || 5000;
 
-mongoose
-  .connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log("MongoDB Atlas connected ✅");
+    console.log("MongoDB connected ✅");
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
@@ -56,6 +55,6 @@ mongoose
 
   })
   .catch(err => {
-    console.error("DB Error:", err);
+    console.error("DB Error:", err.message);
     process.exit(1);
   });
