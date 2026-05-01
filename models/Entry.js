@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const EntrySchema = new mongoose.Schema({
   userId: {
     type: String,
-    default: "demo-user"
+    required: true
   },
 
   text: {
@@ -11,18 +11,15 @@ const EntrySchema = new mongoose.Schema({
     required: true
   },
 
-  // ✅ entered mood (existing)
   mood: {
     type: String,
     required: true
   },
 
-  // 🔥 NEW: predicted mood from NLP
   predictedMood: {
     type: String
   },
 
-  // 🔥 NEW: comparison (optional but useful)
   moodComparison: {
     type: String,
     enum: ["Match", "Mismatch"]
@@ -50,19 +47,14 @@ const EntrySchema = new mongoose.Schema({
     default: "Aligned"
   },
 
-  // 🔥 OPTIONAL: extra insights
   confidence: {
     type: Number
   },
 
   insight: {
     type: String
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
-});
+
+}, { timestamps: true });
 
 module.exports = mongoose.model("Entry", EntrySchema);
