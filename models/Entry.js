@@ -6,53 +6,37 @@ const EntrySchema = new mongoose.Schema({
     required: true
   },
 
-  text: {
-    type: String,
-    required: true
+  // 🔥 NEW STRUCTURE
+  content: {
+    text: {
+      type: String,
+      required: true
+    }
   },
 
   mood: {
-    type: String,
-    required: true
+    entered: {
+      type: String,
+      required: true
+    },
+    predicted: String,
+    comparison: String
   },
 
-  predictedMood: {
-    type: String
-  },
-
-  moodComparison: {
-    type: String,
-    enum: ["Match", "Mismatch"]
-  },
-
-  sentimentScore: {
-    type: Number,
-    required: true
-  },
-
-  severity: {
-    type: String,
-    enum: ["Low", "Moderate", "High"],
-    required: true
-  },
-
-  mismatch: {
-    type: Boolean,
-    default: false
-  },
-
-  perceptionType: {
-    type: String,
-    enum: ["Aligned", "Masking Stress", "Resilience"],
-    default: "Aligned"
-  },
-
-  confidence: {
-    type: Number
-  },
-
-  insight: {
-    type: String
+  analysis: {
+    sentimentScore: {
+      type: Number,
+      required: true
+    },
+    severity: {
+      type: String,
+      enum: ["Low", "Moderate", "High"],
+      required: true
+    },
+    mismatch: Boolean,
+    perceptionType: String,
+    confidence: Number,
+    insight: String
   }
 
 }, { timestamps: true });
