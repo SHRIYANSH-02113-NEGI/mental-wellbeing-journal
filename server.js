@@ -8,67 +8,37 @@ const journalRoutes = require("./routes/journalRoutes");
 
 const app = express();
 
-/* =======================
-   ✅ CORS CONFIG
-======================= */
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://mental-wellbeing-full.vercel.app"
-  ],
-  credentials: true
-}));
-
-/* =======================
-   ✅ MIDDLEWARE
-======================= */
+// ✅ Middleware
+app.use(cors());
 app.use(express.json());
 
-/* =======================
-   ✅ ROOT ROUTE
-======================= */
+// ✅ Root route (fixes "Cannot GET /")
 app.get("/", (req, res) => {
   res.json({ message: "Backend is LIVE 🚀" });
 });
 
-/* =======================
-   ✅ HEALTH CHECK
-======================= */
-app.get("/health", (req, res) => {
-  res.send("OK");
-});
-
-/* =======================
-   ✅ API ROUTES
-======================= */
+// ✅ API routes
 app.use("/api", journalRoutes);
 
-/* =======================
-   ✅ PORT
-======================= */
+// ✅ Port (Render provides PORT automatically)
 const PORT = process.env.PORT || 5000;
 
-/* =======================
-   ✅ DATABASE CONNECTION
-======================= */
-mongoose.connect(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 5000
-})
-.then(() => {
-  console.log("MongoDB connected ✅");
+// ✅ Connect DB THEN start server (IMPORTANT)
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("MongoDB connected ✅");
 
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error("DB Connection Error ❌:", err.message);
+    process.exit(1);
   });
-})
-.catch(err => {
-  console.error("DB Connection Error ❌:", err.message);
-  process.exit(1);
-});
 
-/* =======================
-   ✅ ERROR HANDLER
-======================= */
+// ✅ Error handler
 app.use((err, req, res, next) => {
   console.error("Server Error:", err.message);
   res.status(500).json({
