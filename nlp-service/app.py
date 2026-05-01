@@ -25,7 +25,7 @@ def home():
 @app.route("/analyze", methods=["POST"])
 def analyze():
     try:
-        data = request.get_json(silent=True)  # ✅ safer
+        data = request.get_json(silent=True)
 
         if not data or "text" not in data:
             return jsonify({"success": False, "error": "Text is required"}), 400
@@ -38,7 +38,7 @@ def analyze():
         text = preprocess_text(raw_text)
 
         scores = analyzer.polarity_scores(text)
-        score = scores.get("compound", 0)  # ✅ safer access
+        score = scores.get("compound", 0)
 
         if score >= 0.4:
             predicted_mood = "Happy"
@@ -72,5 +72,5 @@ def analyze():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))  # ✅ Render-compatible
+    port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
