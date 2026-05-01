@@ -5,7 +5,9 @@ import os
 import re
 
 app = Flask(__name__)
-CORS(app)
+
+# 🔥 Better CORS config
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 analyzer = SentimentIntensityAnalyzer()
 
@@ -19,7 +21,10 @@ def preprocess_text(text):
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"message": "NLP Service Running 🚀"})
+    return jsonify({
+        "status": "ok",
+        "message": "NLP Service Running 🚀"
+    })
 
 
 @app.route("/analyze", methods=["POST"])
@@ -28,18 +33,25 @@ def analyze():
         data = request.get_json(silent=True)
 
         if not data or "text" not in data:
-            return jsonify({"success": False, "error": "Text is required"}), 400
+            return jsonify({
+                "success": False,
+                "error": "Text is required"
+            }), 400
 
         raw_text = data["text"]
 
         if not isinstance(raw_text, str) or raw_text.strip() == "":
-            return jsonify({"success": False, "error": "Invalid or empty text"}), 400
+            return jsonify({
+                "success": False,
+                "error": "Invalid or empty text"
+            }), 400
 
         text = preprocess_text(raw_text)
 
         scores = analyzer.polarity_scores(text)
         score = scores.get("compound", 0)
 
+        # 🔥 Mood prediction
         if score >= 0.4:
             predicted_mood = "Happy"
         elif score >= -0.2:
@@ -47,6 +59,7 @@ def analyze():
         else:
             predicted_mood = "Sad"
 
+        # 🔥 Severity
         if score >= 0.5:
             severity = "Low"
         elif score >= -0.5:
@@ -69,6 +82,14 @@ def analyze():
             "success": False,
             "error": str(e)
         }), 500
+
+
+# 🔥 Health check (important for Render)
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "healthy"
+    })
 
 
 if __name__ == "__main__":
