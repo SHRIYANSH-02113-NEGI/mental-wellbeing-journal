@@ -5,7 +5,19 @@ export default function AwarenessCard() {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    fetch("https://mental-backend-heru.onrender.com/api/awareness")
+    // ✅ ensure userId exists
+    let userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      userId = "user_" + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem("userId", userId);
+    }
+
+    fetch(`${process.env.REACT_APP_API_URL}/awareness`, {
+      headers: {
+        "x-user-id": userId // ✅ IMPORTANT
+      }
+    })
       .then(res => res.json())
       .then(data => {
         setScore(data.awarenessScore || 0);
@@ -18,7 +30,7 @@ export default function AwarenessCard() {
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow text-center">
-
+      
       <h2 className="text-xl font-semibold">
         Awareness Score
       </h2>
