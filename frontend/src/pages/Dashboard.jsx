@@ -34,25 +34,37 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // 🔥 ensure userId exists
+    let userId = localStorage.getItem("userId");
+    if (!userId) {
+      userId = "user_" + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem("userId", userId);
+    }
+
     const fetchAnalytics = async () => {
       try {
         const res = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/analytics` // ✅ FIXED
+          `${process.env.REACT_APP_API_URL}/analytics`, // ✅ FIXED
+          {
+            headers: {
+              "x-user-id": userId // ✅ IMPORTANT
+            }
+          }
         );
 
         if (!res.ok) {
           throw new Error("Failed to fetch");
         }
 
-        const data = await res.json();
+        const data = await res.json() || {};
 
         const t = data.sentimentTrend || [];
         const rawMood = data.moodCount || {};
 
-        // normalize moods
+        // normalize mood keys
         const normalizedMood = {};
         Object.entries(rawMood).forEach(([key, value]) => {
-          const cleanKey = key.toLowerCase();
+          const cleanKey = key?.toLowerCase() || "unknown";
           normalizedMood[cleanKey] =
             (normalizedMood[cleanKey] || 0) + value;
         });
@@ -129,6 +141,7 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
         {/* Line Chart */}
         <div className="bg-white p-6 rounded-2xl shadow">
           <h2 className="text-xl font-semibold">
@@ -208,6 +221,7 @@ export default function Dashboard() {
   );
 }
 
+/* Card Component */
 function Card({ title, value }) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow">
@@ -217,6 +231,7 @@ function Card({ title, value }) {
   );
 }
 
+/* Helper */
 function capitalize(str) {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
