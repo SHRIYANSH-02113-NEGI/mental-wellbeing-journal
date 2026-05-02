@@ -6,10 +6,22 @@ export default function History() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // ✅ ensure userId exists
+    let userId = localStorage.getItem("userId");
+    if (!userId) {
+      userId = "user_" + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem("userId", userId);
+    }
+
     const fetchHistory = async () => {
       try {
         const res = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/entry`
+          `${process.env.REACT_APP_API_URL}/entry`, // ✅ FIXED
+          {
+            headers: {
+              "x-user-id": userId // ✅ IMPORTANT
+            }
+          }
         );
 
         if (!res.ok) {
@@ -18,7 +30,9 @@ export default function History() {
 
         const data = await res.json();
 
-        setEntries(data?.data || []);
+        // backend returns array directly
+        setEntries(data || []);
+
       } catch (err) {
         setError("Failed to load history");
       } finally {
@@ -60,7 +74,7 @@ export default function History() {
           {entries.map((e) => (
             <div
               key={e._id}
-              className="p-5 rounded-2xl shadow-lg bg-white dark:bg-card border hover:shadow-xl transition"
+              className="p-5 rounded-2xl shadow-lg bg-white border hover:shadow-xl transition"
             >
               {/* Date */}
               <p className="text-xs text-gray-400">
@@ -68,45 +82,41 @@ export default function History() {
               </p>
 
               {/* Text */}
-              <p className="mt-2 text-gray-800 dark:text-gray-200">
-                {e.text}
+              <p className="mt-2 text-gray-800">
+                {e.content?.text}
               </p>
 
               {/* Tags */}
               <div className="mt-4 flex flex-wrap gap-2 text-sm">
+
                 <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
-                  Entered Mood: {e.mood}
+                  Entered: {e.mood?.entered}
+                </span>
+
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">
+                  Predicted: {e.mood?.predicted}
                 </span>
 
                 <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full">
-                  Sentiment Score:{" "}
-                  {e.sentimentScore
-                    ? e.sentimentScore.toFixed(2)
-                    : "N/A"}
+                  Score: {e.analysis?.sentimentScore?.toFixed(2) || "N/A"}
                 </span>
 
                 <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
-                  Perception Type: {e.perceptionType || "N/A"}
+                  Type: {e.analysis?.perceptionType || "N/A"}
                 </span>
 
-                {/* NLP Enhancements */}
-                {e.predicted_mood && (
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">
-                    NLP Mood: {e.predicted_mood}
-                  </span>
-                )}
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+                  Severity: {e.analysis?.severity || "N/A"}
+                </span>
 
-                {e.severity && (
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">
-                    Severity: {e.severity}
-                  </span>
-                )}
+                <span className={`px-3 py-1 rounded-full ${
+                  e.analysis?.mismatch
+                    ? "bg-red-100 text-red-600"
+                    : "bg-green-100 text-green-600"
+                }`}>
+                  {e.analysis?.mismatch ? "Mismatch" : "Aligned"}
+                </span>
 
-                {e.mismatch && (
-                  <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full">
-                    ⚠ Mismatch Detected
-                  </span>
-                )}
               </div>
             </div>
           ))}
